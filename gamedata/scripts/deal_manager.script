@@ -1,0 +1,98 @@
+-- hold info on currently active deals
+-- next_deal_time = next ctime to activate a deal
+-- deals = all deals stored
+local deal_manager = {}
+
+-- cache all section names of deals
+local deal_cache = {}
+
+-- convert to a time object that we can apply functions to
+local function t2c(t)
+	if not t then return nil end
+	local ct = game.CTime()
+	ct:set(t.Y,t.M,t.D,t.h,t.m,t.s,t.ms)
+	return ct
+end
+
+-- convert to table that is persistable
+local function c2t(ct)
+	if not ct then return nil end
+	-- printf('%s, %s',ct,type(ct))
+	local Y, M, D, h, m, s, ms = 0, 0, 0, 0, 0, 0, 0
+	Y, M, D, h, m, s, ms = ct:get(Y, M, D, h, m, s, ms)
+	return { Y=Y, M=M, D=D, h=h, m=m, s=s, ms=ms }
+end
+
+function update()
+    local curr_time = game.get_game_time()
+	local restock_time = game_difficulties.get_eco_factor("restock") or 24
+    -- check for stale deals and expire them
+    check_existing_deals(curr_time)
+    -- check to add new deal
+    local next_deal_time = deal_manager.next_deal_time
+    local last_deal_time = t2c(deal_manager.last_deal_time)
+    if curr_time:diffSec(last_deal_time) > next_deal_time * 3600 then
+        -- roll a new deal
+        local trader = random_trader()
+        activate_deal(trader)
+        -- reset
+        deal_manager.last_deal_time = c2t(curr_time)
+        deal_manager.next_deal_time = math.random(24, 36)
+    end
+end
+
+function check_existing_deals(time)
+    local to_remove = {}
+    for k,v in pairs(deal_manager.active) do
+        local duration = v.duration
+        local start = t2c(v.start_time)
+        if time:diffSec(start) > duration * 3600 then
+            print_dbg("Expiring deal for trader %s", k)
+            table.insert(to_remove, k)
+        end
+    end
+    for k,v in pairs(to_remove) do
+        deal_manager.active[v] = nil
+    end
+end
+
+-- return deal data on this trader, if applicable
+-- index by section
+function get_data(trader)
+    return deal_manager.active[trader]
+end
+
+function random_trader()
+    local character_comm = db.actor:character_community()
+
+end
+
+-- pick a random deal to activate
+function activate_deal(trader)
+    
+end
+
+-- on game start, parse all the deals and cache them
+function load_deals()
+    local ini_deals = ini_file_ex("configs\\trade_deals\\deals_baseline.ltx")
+    local deals_sections = ini_deals:get_sections(true)
+    for deal, _ in pairs(deals_sections) do
+        local deal_info = skills_ini:collect_section(deal)
+        if not deal_cache[deal_info.trader] then deal_cache[deal_info.trader] = {} end
+        local new_deal = {}
+        new_deal.category = deal_info.category
+        new_deal.multiplier = deal_info.multiplier
+        new_deal.chance = deal_info.chance
+        new_deal.bark = deal_info.bark
+        new_deal.duration = deal_info.duration
+        new_deal.chance = deal_info.chance
+        deal_cache[deal_info.trader][deal] = {}
+    end
+end
+
+function on_game_start()
+	RegisterScriptCallback("save_state",trade_save)
+	RegisterScriptCallback("load_state",trade_load)
+    load_deals()
+end
+

@@ -1,10 +1,12 @@
 ; how 2 add
 ; trader = section of trader these deals are for
-
+; faction = who these deals are eligible for. deals always eligible for own faction
+; shortlist: stalker,bandit,csky,dolg,freedom,army,ecolog,killer,zombied,monolith,greh,isg,renegade
 ; section = markdown chance, markup chance
 
 [sids_selling_food]
 trader = esc_m_trader
+faction = stalker,dolg,csky,freedom,ecolog
 category = food
 multiplier = 0.7
 bark = st_sid_food_sale
@@ -13,6 +15,7 @@ duration = 4
 
 [skinflint_blowout_sale]
 trader = mil_smart_terrain_7_10_freedom_trader_stalker
+faction = stalker,csky,freedom,ecolog,killer,bandit
 category = weapons,outfits,ammo
 multiplier = 0.7
 bark = st_skinflint_blowout

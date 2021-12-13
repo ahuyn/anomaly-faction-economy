@@ -93,24 +93,6 @@ function on_option_change()
 	rep_mul = faction_economy_mcm.get_config("rep_mul")
 end
 
-function ingest_presets()
-	-- map item kinds to categories
-	local ini_categories = ini_file("trade_deals\\deal_categories.ltx")
-    ini_categories:section_for_each(function(section)
-        local line_count = ini_categories:line_count(section) or 0
-        for i=0,line_count-1 do
-            local junk1, kind, junk2 = ini_categories:r_line(section, i, "", "")
-			kind_to_category[kind] = section
-        end
-    end)
-	-- ingest names of possible deals
-	ini_deals:section_for_each(function(section)
-		local trader = ini_deals:r_string_ex(section, "trader")
-		if not deals_by_trader[trader] then deals_by_trader[trader] = {} end
-		table.insert(deals_by_trader[trader], section)
-	end)
-
-end
 
 function pick_deal(npc_name)	
 	local deal_to_activate = nil
@@ -128,10 +110,12 @@ function pick_deal(npc_name)
 			end
 		end
 	end
+	return deal_copy[math.random(#deal_copy)]
 end
 
 -- roll a new deal
--- return the duration to keep the deal for
+-- return the duration to keep the deal for in hours
+-- new deals roll randomly based on trader timeout
 function activate_deal(npc_name)
 	if not deals_by_trader[npc_name] then return 0 end
 
@@ -146,9 +130,11 @@ function activate_deal(npc_name)
 		deal_data.category[v] = true
 	end
 	deal_data.multiplier = SYS_GetParam(2, deal_to_activate, "multiplier")
+	deal_data.timeout = game.get_game_time()
 	deals[npc_name] = deal_data
 	local duration = SYS_GetParam(2, duration, "multiplier") or 3
 	duration = duration * 3600
+	
 	return duration
 end
 
